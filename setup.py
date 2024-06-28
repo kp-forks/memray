@@ -113,12 +113,13 @@ lint_requires = [
 
 test_requires = [
     "Cython",
-    "greenlet; python_version < '3.12'",
+    "greenlet; python_version < '3.13'",
     "pytest",
     "pytest-cov",
     "ipython",
     "setuptools; python_version >= '3.12'",
     "pytest-textual-snapshot",
+    "textual >= 0.43, != 0.65.2, != 0.66",
 ]
 
 benchmark_requires = [
@@ -216,12 +217,12 @@ BINARY_FORMAT = BINARY_FORMATS.get(sys.platform, "elf")
 library_flags = {"libraries": ["lz4"]}
 if IS_LINUX:
     library_flags["libraries"].append("unwind")
+    library_flags["libraries"].append("debuginfod")
 
 try:
-    if IS_LINUX:
-        library_flags = pkgconfig.parse("liblz4 libunwind")
-    else:
-        library_flags = pkgconfig.parse("liblz4")
+    library_flags = pkgconfig.parse(
+        " ".join(f"lib{libname}" for libname in library_flags["libraries"])
+    )
 except EnvironmentError as e:
     print("pkg-config not found.", e)
     print("Falling back to static flags.")
@@ -250,14 +251,14 @@ MEMRAY_EXTENSION = Extension(
     ],
     language="c++",
     extra_compile_args=["-std=c++17", "-Wall", *EXTRA_COMPILE_ARGS],
-    extra_link_args=["-std=c++17", "-lbacktrace", *EXTRA_LINK_ARGS],
+    extra_objects=[str(LIBBACKTRACE_LIBDIR / "libbacktrace.a")],
+    extra_link_args=["-std=c++17", *EXTRA_LINK_ARGS],
     define_macros=DEFINE_MACROS,
     undef_macros=UNDEF_MACROS,
     **library_flags,
 )
 
-MEMRAY_EXTENSION.library_dirs.extend([str(LIBBACKTRACE_LIBDIR)])
-MEMRAY_EXTENSION.include_dirs.extend(["src", str(LIBBACKTRACE_INCLUDEDIRS)])
+MEMRAY_EXTENSION.include_dirs[:0] = ["src", str(LIBBACKTRACE_INCLUDEDIRS)]
 MEMRAY_EXTENSION.libraries.append("dl")
 
 
@@ -317,6 +318,7 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: Implementation :: CPython",
         "Topic :: Software Development :: Debuggers",
     ],

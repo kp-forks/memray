@@ -491,7 +491,7 @@ macho_defined_symbol (uint8_t type)
 {
   if ((type & MACH_O_N_STAB) != 0)
   {
-    switch (type) 
+    switch (type)
      {
      case MACH_O_N_FNAME:
       return 1;
@@ -1279,7 +1279,7 @@ backtrace_initialize (struct backtrace_state *state, const char *filename,
       mff = macho_nodebug;
       if (!macho_add (state, name, d, 0, NULL, base_address, 0,
 		      error_callback, data, &mff, &mfs))
-	return 0;
+	continue;
 
       if (mff != macho_nodebug)
 	macho_fileline_fn = mff;

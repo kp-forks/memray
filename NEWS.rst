@@ -8,6 +8,60 @@ Changelog
 
 .. towncrier release notes start
 
+memray 1.13.2 (2024-06-27)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix a bug that could in rare circumstances result in a stack overflow while processing native mode stacks. (#639)
+
+
+Miscellaneous
+~~~~~~~~~~~~~
+
+- Upgrade our vendored copy of ``libbacktrace``, used for reporting native stacks, to the latest version. (#639)
+
+
+memray 1.13.1 (2024-06-23)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix a deadlock that could occur on some Linux systems when resolving debug information using debuginfod. (#634)
+
+
+memray 1.13.0 (2024-06-18)
+--------------------------
+
+Features
+~~~~~~~~
+
+- Add :doc:`a tutorial <tutorials/index>` to the Memray documentation. (#590)
+- Include the thread name in the live TUI. (#562)
+- Capture the name attribute of Python `threading.Thread` objects. (#562)
+- Allow using Ctrl+Z to suspend ``memray tree`` and the live mode TUI. (#581)
+- Add a button in the live-mode TUI to show allocations from all threads at once. (#589)
+- Vendor ``libdebuginfod`` into our Linux wheels, so that debuginfod integration can be used without any dependency on system-installed libraries. (#592)
+
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix dynamic toggling between descriptions like "Pause" vs "Unpause" or "Show" vs "Hide" in the footer of the live-mode TUI and tree reporter. This was broken by changes introduced in Textual 0.61 (and again by Textual 0.63). (#597)
+- Correctly localize the start and end time in the "Stats" modal when an HTML report was generated on a different machine than the one it is being displayed on. (#611)
+- Fix a crash in old macOS versions (<11.0) due to the inavailability of some linker cache APIs. (#615)
+- Fix reporting of "Own Memory" in the ``live`` and ``summary`` reporters. A bug in our summation caused us to undercount functions' direct allocations. (#617)
+
+
+Miscellaneous
+~~~~~~~~~~~~~
+
+- Builds from source now work for Python 3.13. Wheels are not yet published for 3.13 because it is not yet ABI stable. (#622)
+- Link our Linux wheels against the latest version of ``elfutils``. (#592)
+
+
 memray 1.12.0 (2024-03-07)
 --------------------------
 

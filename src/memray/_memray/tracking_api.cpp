@@ -569,10 +569,6 @@ Tracker::Tracker(
 
         hooks::ensureAllHooksAreValid();
         NativeTrace::setup();
-
-        // We must do this last so that a child can't inherit an environment
-        // where only half of our one-time setup is done.
-        pthread_atfork(&prepareFork, &parentFork, &childFork);
     });
 
     d_writer->setMainTidAndSkippedFrames(thread_id(), computeMainTidSkip());
@@ -607,7 +603,7 @@ Tracker::~Tracker()
         d_patcher.restore_symbols();
     }
 
-    if (Py_IsInitialized() && !_Py_IsFinalizing()) {
+    if (Py_IsInitialized() && !compat::isPythonFinalizing()) {
         PyGILState_STATE gstate;
         gstate = PyGILState_Ensure();
 
@@ -842,6 +838,7 @@ Tracker::trackAllocationImpl(
         hooks::Allocator func,
         const std::optional<NativeTrace>& trace)
 {
+    registerCachedThreadName();
     PythonStackTracker::get().emitPendingPushesAndPops();
 
     if (d_unwind_native_frames) {
@@ -871,6 +868,7 @@ Tracker::trackAllocationImpl(
 void
 Tracker::trackDeallocationImpl(void* ptr, size_t size, hooks::Allocator func)
 {
+    registerCachedThreadName();
     AllocationRecord record{reinterpret_cast<uintptr_t>(ptr), size, func};
     if (!d_writer->writeThreadSpecificRecord(thread_id(), record)) {
         std::cerr << "Failed to write output, deactivating tracking" << std::endl;
@@ -963,10 +961,35 @@ void
 Tracker::registerThreadNameImpl(const char* name)
 {
     RecursionGuard guard;
+    dropCachedThreadName();
     if (!d_writer->writeThreadSpecificRecord(thread_id(), ThreadRecord{name})) {
         std::cerr << "memray: Failed to write output, deactivating tracking" << std::endl;
         deactivate();
     }
+}
+
+void
+Tracker::registerCachedThreadName()
+{
+    if (d_cached_thread_names.empty()) {
+        return;
+    }
+
+    auto it = d_cached_thread_names.find((uint64_t)(pthread_self()));
+    if (it != d_cached_thread_names.end()) {
+        auto& name = it->second;
+        if (!d_writer->writeThreadSpecificRecord(thread_id(), ThreadRecord{name.c_str()})) {
+            std::cerr << "memray: Failed to write output, deactivating tracking" << std::endl;
+            deactivate();
+        }
+        d_cached_thread_names.erase(it);
+    }
+}
+
+void
+Tracker::dropCachedThreadName()
+{
+    d_cached_thread_names.erase((uint64_t)(pthread_self()));
 }
 
 frame_id_t
